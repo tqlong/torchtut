@@ -4,20 +4,50 @@ from easydict import EasyDict
 
 
 def train_model(train_config):
+    '''
+    train_config = EasyDict(
+        device      = computing device
+        num_epochs  = maximum number of epochs
+        batch_size  = training batch size
+        num_workers = number of data threads
+        model_path  = output model path
+        datasets    = EasyDict(train, test) training and testing sets
+        model       = model to train, moved to computing device
+        criterion   = callable loss function 
+        optimizer   = specified optimizer
+        scheduler   = specified scheduler
+    )
+    return:
+      save last epoch model and best model to train_config.model_path
+      train_config.model is the trained model
+    '''
     def get_progress_bar(loader):
+        '''
+        loader: a DataLoader
+        return: a tqdm progress bar with total steps equal len(loader)
+        '''
         return tqdm(enumerate(loader), total=len(loader))
 
     def optimizer_step(loss):
+        '''
+        carry out a training step using optimizer 
+        '''
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
     def to_device(images, labels):
+        '''
+        return: tuple(image, labels) that are moved to computing device
+        '''
         images = images.to(train_config.device)
         labels = labels.to(train_config.device)
         return images, labels
 
     def train_one_epoch(epoch):
+        '''
+        carry out a training epoch with progress bar
+        '''
         model.train()
         pbar = get_progress_bar(loaders.train)
         for i, (images, labels) in pbar:
@@ -31,15 +61,23 @@ def train_model(train_config):
             pbar.set_description(f'train epoch {epoch} loss {loss.item():.4f}')
 
     def init_metric():
-        return EasyDict(dict(
-            total=0, correct=0
-        ))
+        '''
+        return: a zero dict(total, correct) to start accumulating
+        '''
+        return EasyDict(dict(total=0, correct=0))
     
     def accumulate_metric(predicted, labels, metric):
+        '''
+        update a metric = dict(total, correct) with test results from (predicted, labels)
+        '''
         metric.total += labels.size(0)
         metric.correct += (predicted == labels).sum().item()
     
     def test_one_epoch(epoch):
+        '''
+        carry out a testing epoch with progress bar
+        accumulating accuracy in all batches
+        '''
         model.eval()
         pbar = get_progress_bar(loaders.test)
         metric = init_metric()           
@@ -55,6 +93,9 @@ def train_model(train_config):
             save_model(accuracy=metric.correct/metric.total, epoch=epoch)
 
     def save_model(accuracy, epoch):
+        '''
+        save current model and save current best model
+        '''
         nonlocal current_best
         data_to_save = {
             'model': model.state_dict(),
@@ -77,8 +118,8 @@ def train_model(train_config):
     
     # create data loaders
     loaders = EasyDict(dict(
-        train=torch.utils.data.DataLoader(datasets.train, batch_size=train_config.batch_size, shuffle=True),
-        test=torch.utils.data.DataLoader(datasets.test, batch_size=train_config.batch_size, shuffle=False),
+        train=torch.utils.data.DataLoader(datasets.train, batch_size=train_config.batch_size, shuffle=True, num_workers=train_config.num_workers),
+        test=torch.utils.data.DataLoader(datasets.test, batch_size=train_config.batch_size, shuffle=False, num_workers=train_config.num_workers),
     ))
     
     # start training
