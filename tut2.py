@@ -28,13 +28,14 @@ def get_transform():
         transforms.ToTensor()])
     return transform
 
-def get_datasets(transform):
+def get_datasets():
     '''
-    transform: a torch's transform for RGB images
     return: 
       datasets.train: training set with tranform
       datasets.test: testing set with ToTensor transform only
     '''
+    transform = get_transform()
+    
     # CIFAR-10 dataset
     datasets = EasyDict(dict(
         train=torchvision.datasets.CIFAR10(root='data/',
@@ -100,7 +101,7 @@ def main():
     ))
 
     # additional objects (model, datasets, criterion, optimizer, scheduler) for training
-    train_config.datasets  = get_datasets(get_transform())
+    train_config.datasets  = get_datasets()
     train_config.model     = get_model(train_config.device)
     train_config.criterion = get_loss()
     max_iter               = get_max_iter(train_config, len(train_config.datasets.train))
