@@ -1,0 +1,28 @@
+name: torchtut
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.7
+  - pip
+  - numpy
+  - scipy
+  - matplotlib
+  - pytorch
+  - torchvision
+  - cudatoolkit=10.1
+  - tensorflow
+  - pillow=6.1
+  - pandas
+  - tqdm
+  - jupyter
+  - jupyterlab
+  - ipywidgets
+  - nodejs
+  - pip:
+    - easydict
+    - pydicom==1.3.0
+    - opencv-contrib-python
+    - albumentations
+    - torchsummary
+
