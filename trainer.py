@@ -115,7 +115,7 @@ def train_model(train_config):
             last_file = f'{train_config.model_path}_best_{current_best:.4f}.ckpt'
             if os.path.exists(last_file):
                 os.remove(last_file)
-            print(f'val_acc improved from {current_best*100:.2f}% to {accuracy*100:.2f}')
+            print(f'val_acc improved from {current_best*100:.2f}% to {accuracy*100:.2f}%')
             torch.save(data_to_save, f'{train_config.model_path}_best_{accuracy:.4f}.ckpt')
             current_best = accuracy
 
