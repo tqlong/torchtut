@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 from easydict import EasyDict
-
+import os
 
 def train_model(train_config):
     '''
@@ -51,6 +51,8 @@ def train_model(train_config):
         model.train()
         pbar = get_progress_bar(loaders.train)
         for i, (images, labels) in pbar:
+            if 'additional_preprocess' in train_config:
+                images, labels = train_config.additional_preprocess(images, labels)
             images, labels = to_device(images, labels)
             outputs = model(images)
             
@@ -83,6 +85,11 @@ def train_model(train_config):
         metric = init_metric()           
         with torch.no_grad():
             for i, (images, labels) in pbar:
+#                 print("before", images.shape)
+                if 'additional_preprocess' in train_config:
+                    images, labels = train_config.additional_preprocess(images, labels)
+#                 print("after", images.shape)
+#                 exit(0)
                 images, labels = to_device(images, labels)
                 outputs = model(images)
                 
@@ -105,8 +112,11 @@ def train_model(train_config):
         }
         torch.save(data_to_save, f'{train_config.model_path}.ckpt')
         if accuracy > current_best:
+            last_file = f'{train_config.model_path}_best_{current_best:.4f}.ckpt'
+            if os.path.exists(last_file):
+                os.remove(last_file)
             print(f'val_acc improved from {current_best*100:.2f}% to {accuracy*100:.2f}')
-            torch.save(data_to_save, f'{train_config.model_path}_best.ckpt')
+            torch.save(data_to_save, f'{train_config.model_path}_best_{accuracy:.4f}.ckpt')
             current_best = accuracy
 
     # training main code

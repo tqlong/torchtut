@@ -6,7 +6,7 @@ import torchvision
 import torchvision.transforms as transforms
 from easydict import EasyDict
 
-from tut2_model import ResNet, ResidualBlock
+from tut3_model import RNN
 from trainer import train_model
 
 def get_transform():
@@ -16,8 +16,7 @@ def get_transform():
     # Image preprocessing modules
     transform = transforms.Compose([
         transforms.Pad(4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomCrop(32),
+        transforms.RandomCrop(28),
         transforms.ToTensor()])
     return transform
 
@@ -29,15 +28,10 @@ def get_datasets():
     '''
     transform = get_transform()
     
-    # CIFAR-10 dataset
+    # MNIST dataset
     datasets = EasyDict(dict(
-        train=torchvision.datasets.CIFAR10(root='data/',
-                                           train=True, 
-                                           transform=transform,
-                                           download=True),
-        test =torchvision.datasets.CIFAR10(root='data/',
-                                           train=False, 
-                                           transform=transforms.ToTensor()),
+        train=torchvision.datasets.MNIST(root='data/', train=True, transform=transform, download=True),
+        test =torchvision.datasets.MNIST(root='data/', train=False, transform=transforms.ToTensor()),
     ))
     return datasets
 
@@ -56,12 +50,12 @@ def get_quick_optimizer(model, max_iter, base_lr=0.001, power=0.9):
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_update)
     return optimizer, scheduler
 
-def get_model(device):
+def get_model(config):
     '''
     device: compute device "cpu", "cuda", "cuda:0", "cuda:1"
     return: a torch model on device
     '''
-    return ResNet(ResidualBlock, [3, 3, 3]).to(device)
+    return RNN(config.input_size, config.hidden_size, config.num_layers, config.num_classes).to(config.device)
 
 def get_loss():
     '''
@@ -75,6 +69,11 @@ def get_max_iter(train_config, ndata):
     '''
     return train_config.num_epochs*math.ceil(ndata/train_config.batch_size)
 
+def additional_preprocess(train_config):
+    def preprocess(images, labels):
+        return images.reshape(-1, train_config.sequence_length, train_config.input_size), labels
+    return preprocess
+
 def main():
     '''
     main training code
@@ -83,19 +82,25 @@ def main():
     train_config = EasyDict(dict(
         # device
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'),
+        # RNN parameters
+        sequence_length = 28,
+        input_size = 28,
+        hidden_size = 128,
+        num_layers = 2,
         # training configuration
-        num_epochs = 80,
+        num_epochs = 10,
         num_classes = 10,
         batch_size = 100,
         num_workers = 6,
         learning_rate = 1e-3,
         power = 0.9,
-        model_path = 'runs/resnet_exp_2',
+        model_path = 'runs/rnn_exp_1',
     ))
 
     # additional objects (model, datasets, criterion, optimizer, scheduler) for training
+    train_config.additional_preprocess = additional_preprocess(train_config)
     train_config.datasets  = get_datasets()
-    train_config.model     = get_model(train_config.device)
+    train_config.model     = get_model(train_config)
     train_config.criterion = get_loss()
     max_iter               = get_max_iter(train_config, len(train_config.datasets.train))
     train_config.optimizer, train_config.scheduler\
