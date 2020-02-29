@@ -16,6 +16,7 @@ def train_model(train_config):
         criterion   = callable loss function 
         optimizer   = specified optimizer
         scheduler   = specified scheduler
+        additional_preprocess = func(images, labels) -> (images, labels)
     )
     return:
       save last epoch model and best model to train_config.model_path
@@ -85,11 +86,8 @@ def train_model(train_config):
         metric = init_metric()           
         with torch.no_grad():
             for i, (images, labels) in pbar:
-#                 print("before", images.shape)
                 if 'additional_preprocess' in train_config:
                     images, labels = train_config.additional_preprocess(images, labels)
-#                 print("after", images.shape)
-#                 exit(0)
                 images, labels = to_device(images, labels)
                 outputs = model(images)
                 
